@@ -1,6 +1,4 @@
-import PropTypes from 'prop-types';
-import React, { useRef } from 'react';
-import { connect } from 'react-redux';
+import React, {RefObject, useRef } from 'react';
 import { ReflexContainer, ReflexElement, ReflexSplitter } from 'react-reflex';
 import { createSelector } from 'reselect';
 import { isDonationModalOpenSelector, userSelector } from '../../../redux';
@@ -11,38 +9,39 @@ import {
 } from '../redux';
 import { getTargetEditor } from '../utils/get-target-editor';
 import './editor.css';
+import { ChallengeFiles, Test, ResizeProps, Ext, FileKey} from '../../../redux/prop-types';
+import { Themes } from '../../../components/settings/theme';
 import Editor from './editor';
 
-const propTypes = {
-  canFocus: PropTypes.bool,
-  // TODO: use shape
-  challengeFiles: PropTypes.array,
-  containerRef: PropTypes.any.isRequired,
-  contents: PropTypes.string,
-  description: PropTypes.string,
-  dimensions: PropTypes.object,
-  editorRef: PropTypes.any.isRequired,
-  ext: PropTypes.string,
-  fileKey: PropTypes.string,
-  initialEditorContent: PropTypes.string,
-  initialExt: PropTypes.string,
-  initialTests: PropTypes.array,
-  output: PropTypes.arrayOf(PropTypes.string),
-  resizeProps: PropTypes.shape({
-    onStopResize: PropTypes.func,
-    onResize: PropTypes.func
-  }),
-  theme: PropTypes.string,
-  title: PropTypes.string,
-  showProjectPreview: PropTypes.bool,
-  usesMultifileEditor: PropTypes.bool,
-  visibleEditors: PropTypes.shape({
-    scriptjs: PropTypes.bool,
-    indexjsx: PropTypes.bool,
-    stylescss: PropTypes.bool,
-    indexhtml: PropTypes.bool
-  })
-};
+interface VisibleEditors {
+  scriptjs: boolean;
+  indexjsx: boolean;
+  stylescss: boolean;
+  indexhtml: boolean;
+}
+
+interface MultiFileEditorProps {
+  canFocus: boolean;
+  challengeFiles: ChallengeFiles;
+  containerRef: RefObject<HTMLElement>;
+  contents: string;
+  description: string | null;
+  dimensions: Record<string, unknown>;
+  editorRef: React.RefObject<HTMLElement>;
+  ext: Ext;
+  fileKey: FileKey;
+  initialEdiorContent: string;
+  initialExt: string;
+  initialTests: Test[];
+  output: string[]
+  resizeProps: ResizeProps;
+  theme: Themes;
+  title: string;
+  showProjectPreview: boolean;
+  usesMultifileEditor: boolean;
+  visibleEditors: VisibleEditors;
+}
+
 
 const mapStateToProps = createSelector(
   visibleEditorsSelector,
@@ -50,7 +49,7 @@ const mapStateToProps = createSelector(
   consoleOutputSelector,
   isDonationModalOpenSelector,
   userSelector,
-  (visibleEditors, canFocus, output, open, { theme = 'default' }) => ({
+  (visibleEditors: VisibleEditors, canFocus: boolean, output: string, open, theme: Themes.Default) => ({
     visibleEditors,
     canFocus: open ? false : canFocus,
     output,
@@ -58,7 +57,7 @@ const mapStateToProps = createSelector(
   })
 );
 
-const MultifileEditor = props => {
+const MultifileEditor = (props: MultiFileEditorProps): JSX.Element => {
   const {
     challengeFiles,
     containerRef,
@@ -94,7 +93,7 @@ const MultifileEditor = props => {
   if (stylescss) editorKeys.push('stylescss');
   if (scriptjs) editorKeys.push('scriptjs');
 
-  const editorAndSplitterKeys = editorKeys.reduce((acc, key) => {
+  const editorAndSplitterKeys = editorKeys.reduce((acc: string[], key: string): string[] => {
     if (acc.length === 0) {
       return [key];
     } else {
@@ -111,7 +110,7 @@ const MultifileEditor = props => {
     >
       <ReflexElement flex={10} {...reflexProps} {...resizeProps}>
         <ReflexContainer orientation='vertical'>
-          {editorAndSplitterKeys.map(key => {
+          {editorAndSplitterKeys.map((key: FileKey) => {
             const isSplitter = key.endsWith('-splitter');
             if (isSplitter) {
               return (
@@ -124,7 +123,7 @@ const MultifileEditor = props => {
                     canFocusOnMountRef={canFocusOnMountRef}
                     challengeFiles={challengeFiles}
                     containerRef={containerRef}
-                    description={targetEditor === key ? description : null}
+                    description={targetEditor === key ? description : ''}
                     editorRef={editorRef}
                     fileKey={key}
                     initialTests={initialTests}
@@ -142,9 +141,6 @@ const MultifileEditor = props => {
       </ReflexElement>
     </ReflexContainer>
   );
-};
+}
 
-MultifileEditor.displayName = 'MultifileEditor';
-MultifileEditor.propTypes = propTypes;
-
-export default connect(mapStateToProps)(MultifileEditor);
+export default MultifileEditor;
