@@ -1,6 +1,35 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+import { TestEvaluatorEvent } from '../../../client/workers/test-evaluator'
+
+interface WorkerEvent {
+  LOG: Array<(data: TestEvaluatorEvent) => void>;
+  error:  Array<(data: TestEvaluatorEvent) => void>;
+  done: Array<(data: TestEvaluatorEvent) => void>; 
+}
+
+type newWorkerEvent = keyof WorkerEvent;
+
+interface Task {
+  done: Promise<Worker>
+  _worker: Worker | null;
+  _events: WorkerEvent;
+  _execute: (worker: WorkerExecutor['_getWorker']) => Task
+  emit: {(event: newWorkerEvent, args: TestEvaluatorEvent ): Task };
+  once: (event: newWorkerEvent, listener: (args: TestEvaluatorEvent) => void) => void;
+  on: (event: newWorkerEvent, listener: (args: TestEvaluatorEvent) => void) => void;
+  removeListener: (event: newWorkerEvent, listener: (args: TestEvaluatorEvent) => void) => void;
+
+}
+
 class WorkerExecutor {
+  _workerPool: Worker[];
+  _taskQueue: Task[];
+  _workersInUse: number;
+  _maxWorkers: number;
+  _terminateWorker: boolean;
+  _scriptURL: string;
   constructor(
-    workerName,
+    workerName: string,
     { location = '/js/', maxWorkers = 2, terminateWorker = false } = {}
   ) {
     this._workerPool = [];
@@ -13,16 +42,16 @@ class WorkerExecutor {
     this._getWorker = this._getWorker.bind(this);
   }
 
-  async _getWorker() {
+  async _getWorker(): Promise<Worker> {
     return this._workerPool.length
-      ? this._workerPool.shift()
+      ? this._workerPool.shift() as Worker
       : this._createWorker();
   }
 
-  _createWorker() {
+  _createWorker(): Promise<Worker> {
     return new Promise((resolve, reject) => {
       const newWorker = new Worker(this._scriptURL);
-      newWorker.onmessage = e => {
+      newWorker.onmessage = (e: TestEvaluatorEvent) => {
         if (e.data?.type === 'contentLoaded') {
           resolve(newWorker);
         }
@@ -31,7 +60,7 @@ class WorkerExecutor {
     });
   }
 
-  _handleTaskEnd(task) {
+  _handleTaskEnd(task: Task) {
     return () => {
       this._workersInUse--;
       const worker = task._worker;
@@ -50,53 +79,56 @@ class WorkerExecutor {
 
   _processQueue() {
     while (this._workersInUse < this._maxWorkers && this._taskQueue.length) {
-      const task = this._taskQueue.shift();
+      const task = this._taskQueue.shift() as Task;
       const handleTaskEnd = this._handleTaskEnd(task);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       task._execute(this._getWorker).done.then(handleTaskEnd, handleTaskEnd);
       this._workersInUse++;
     }
   }
 
-  execute(data, timeout = 1000) {
-    const task = eventify({});
+  execute(data: TestEvaluatorEvent, timeout = 1000) {
+    console.log(data);
+    const task: Task  = eventify({});
     task._execute = function (getWorker) {
       getWorker().then(
-        worker => {
+        (worker: Worker) => {
           task._worker = worker;
           const timeoutId = setTimeout(() => {
-            task._worker.terminate();
+            task._worker?.terminate();
             task._worker = null;
             this.emit('error', { message: 'timeout' });
           }, timeout);
 
-          worker.onmessage = e => {
+          worker.onmessage = (e: TestEvaluatorEvent) => {
             clearTimeout(timeoutId);
             // data.type is undefined when the message has been processed
             // successfully and defined when something else has happened (e.g.
             // an error occurred)
+            console.log(e.data)
             if (e.data?.type) {
-              this.emit(e.data.type, e.data.data);
+              console.log(e.data.type);
+              this.emit('error', data.data);
             } else {
+              console.log(e.data.type);
               this.emit('done', e.data);
             }
           };
 
-          worker.onerror = e => {
+          worker.onerror = (e: ErrorEvent) => {
             clearTimeout(timeoutId);
             this.emit('error', { message: e.message });
           };
 
           worker.postMessage(data);
         },
-        err => this.emit('error', err)
+        (err: Error) => this.emit('error', err)
       );
       return this;
     };
 
     task.done = new Promise((resolve, reject) => {
-      task
-        .once('done', data => resolve(data))
-        .once('error', err => reject(err.message));
+      task.once('done', data => resolve(data))
     });
 
     this._taskQueue.push(task);
@@ -106,8 +138,8 @@ class WorkerExecutor {
 }
 
 // Error and completion handling
-const eventify = self => {
-  self._events = {};
+const eventify = (self: Task ) => {
+  self._events = {error: [], done: [], LOG: []};
 
   self.on = (event, listener) => {
     if (typeof self._events[event] === 'undefined') {
@@ -127,8 +159,9 @@ const eventify = self => {
     return self;
   };
 
-  self.emit = (event, ...args) => {
+  self.emit = (event , ...args) => {
     if (typeof self._events[event] !== 'undefined') {
+     
       self._events[event].forEach(listener => {
         listener.apply(self, args);
       });
@@ -137,16 +170,26 @@ const eventify = self => {
   };
 
   self.once = (event, listener) => {
+    console.log(typeof listener);
     self.on(event, function handler(...args) {
-      self.removeListener(handler);
+      self.removeListener(event, handler);
       listener.apply(self, args);
     });
     return self;
   };
-
+  console.log(self);
   return self;
 };
 
-export default function createWorkerExecutor(workerName, options) {
+export default function createWorkerExecutor(
+  workerName: string,
+  options?:
+    | {
+        location?: string | undefined;
+        maxWorkers?: number | undefined;
+        terminateWorker?: boolean | undefined;
+      }
+    | undefined
+) {
   return new WorkerExecutor(workerName, options);
 }
