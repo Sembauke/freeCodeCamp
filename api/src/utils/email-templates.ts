@@ -30,3 +30,14 @@ Email: ${reporter.email}
 Thanks and regards,
 ${reporter.name ?? ''}`;
 };
+
+export const generateUpdateEmail = () => {
+  return `
+Hello User,
+
+Your profile has been updated.
+
+Thanks and regards,
+Team`;
+}
+

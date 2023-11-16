@@ -6,6 +6,7 @@ import { isProfane } from 'no-profanity';
 import { blocklistedUsernames } from '../../../shared/config/constants';
 import { isValidUsername } from '../../../shared/utils/validate';
 import { schemas } from '../schemas';
+import { generateUpdateEmail } from '../utils/email-templates';
 
 // TODO: move getWaitMessage and getWaitPeriod to own module and add tests
 function getWaitMessage(lastEmailSentAt: Date | null) {
@@ -179,7 +180,8 @@ ${isLinkSentWithinLimitTTL}`
         } as const;
       }
 
-      // ToDo(MVP): email the new email and wait user to confirm it, before we update the user schema.
+
+
       try {
         await fastify.prisma.user.update({
           where: { id: req.session.user.id },
@@ -202,7 +204,21 @@ ${isLinkSentWithinLimitTTL}`
             type: 'info',
             message: tooManyRequestsMessage
           } as const;
+        } else {
+          await fastify.sendEmail({
+            from: 'team@freecodecamp.org',
+            to: newEmail,
+            subject: 'Please confirm your updated email address for freeCodeCamp.org',
+            text: generateUpdateEmail()
+          });
+
         }
+
+
+
+
+
+
 
         await fastify.prisma.user.update({
           where: { id: req.session.user.id },
