@@ -6,8 +6,52 @@ import { AvatarRenderer, FullWidthRow, Spacer } from '../../helpers';
 import { parseDate } from './utils';
 import SocialIcons from './social-icons';
 import { type CamperProps } from './camper';
+import About from '../../settings/about';
 
 const Bio = ({
+  joinDate,
+  location,
+  username,
+  name,
+  about,
+  githubProfile,
+  linkedin,
+  twitter,
+  website,
+  isDonating,
+  yearsTopContributor,
+  picture,
+  isEditingProfile
+}: CamperProps) => {
+  return (
+    <FullWidthRow>
+      {!isEditingProfile ? (
+        <>
+          <NonEditableBio
+            joinDate={joinDate}
+            location={location}
+            username={username}
+            name={name}
+            about={about}
+            githubProfile={githubProfile}
+            linkedin={linkedin}
+            twitter={twitter}
+            website={website}
+            isDonating={isDonating}
+            yearsTopContributor={yearsTopContributor}
+            picture={picture}
+          />
+        </>
+      ) : (
+        <>
+          <About />
+        </>
+      )}
+    </FullWidthRow>
+  );
+};
+
+const NonEditableBio = ({
   joinDate,
   location,
   username,
@@ -27,7 +71,7 @@ const Bio = ({
     yearsTopContributor && yearsTopContributor.length > 0;
 
   return (
-    <FullWidthRow>
+    <>
       <div className='avatar-camper'>
         <AvatarRenderer
           isDonating={isDonating}
@@ -61,7 +105,10 @@ const Bio = ({
         website={website}
       />
       <hr />
-    </FullWidthRow>
+    </>
   );
 };
+
+const EditableBio = () => {};
+
 export default Bio;

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Helmet from 'react-helmet';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 
-import { Alert, Container, Row } from '@freecodecamp/ui';
+import { Alert, Button, Container, Row } from '@freecodecamp/ui';
 import { FullWidthRow, Link, Spacer } from '../helpers';
 import { User } from './../../redux/prop-types';
 import Timeline from './components/time-line';
@@ -54,6 +54,8 @@ const Message = ({ isSessionUser, t, username }: MessageProps) => {
 };
 
 function UserProfile({ user }: { user: ProfileProps['user'] }): JSX.Element {
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
   const {
     profileUI: {
       showAbout,
@@ -86,6 +88,9 @@ function UserProfile({ user }: { user: ProfileProps['user'] }): JSX.Element {
 
   return (
     <>
+      <Button onClick={() => setIsEditingProfile(!isEditingProfile)}>
+        {isEditingProfile ? 'Save Profile' : 'Edit Profile'}
+      </Button>
       <Camper
         about={showAbout ? about : ''}
         githubProfile={githubProfile}
@@ -99,6 +104,7 @@ function UserProfile({ user }: { user: ProfileProps['user'] }): JSX.Element {
         username={username}
         website={website}
         yearsTopContributor={yearsTopContributor}
+        isEditingProfile={isEditingProfile}
       />
       {showPoints ? <Stats points={points} calendar={calendar} /> : null}
       {showHeatMap ? <HeatMap calendar={calendar} /> : null}
