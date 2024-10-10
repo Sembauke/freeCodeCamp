@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Helmet from 'react-helmet';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Alert, Container, Modal, Row } from '@freecodecamp/ui';
+import { Alert, Button, Container, Modal, Row } from '@freecodecamp/ui';
 import { FullWidthRow, Link, Spacer } from '../helpers';
 import Portfolio from './components/portfolio';
 
@@ -17,6 +17,7 @@ import Stats from './components/stats';
 import HeatMap from './components/heat-map';
 import './profile.css';
 import { PortfolioProjects } from './components/portfolio-projects';
+import { generateExamTokenComplete } from '../../redux/settings/actions';
 
 interface ProfileProps {
   isSessionUser: boolean;
@@ -24,6 +25,7 @@ interface ProfileProps {
   updateMyPortfolio: () => void;
   updateMySocials: (formValues: Socials) => void;
   submitNewAbout: () => void;
+  generateExamToken: (user: User) => void;
 }
 
 interface EditModalProps {
@@ -216,6 +218,7 @@ function Profile({
   isSessionUser,
   updateMyPortfolio,
   updateMySocials,
+  generateExamToken,
   submitNewAbout
 }: ProfileProps): JSX.Element {
   const { t } = useTranslation();
@@ -226,11 +229,16 @@ function Profile({
 
   const showUserProfile = !isLocked || isSessionUser;
 
+  const handleTokenGen = () => {
+    console.log(generateExamTokenComplete());
+  };
+
   return (
     <>
       <Helmet>
         <title>{t('buttons.profile')} | freeCodeCamp.org</title>
       </Helmet>
+      <Button onClick={() => handleTokenGen()}>generateExamToken</Button>
       <Spacer size='medium' />
       <Container>
         <Spacer size='medium' />
@@ -244,6 +252,7 @@ function Profile({
             updateMyPortfolio={updateMyPortfolio}
             updateMySocials={updateMySocials}
             submitNewAbout={submitNewAbout}
+            generateExamToken={generateExamToken}
           />
         )}
         {!isSessionUser && (

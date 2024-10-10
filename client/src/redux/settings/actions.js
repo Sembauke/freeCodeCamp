@@ -102,6 +102,10 @@ export const verifyCertComplete = createAction(
 );
 export const verifyCertError = createAction(types.verifyCertError);
 
+export const generateExamToken = createAction(types.generateExamToken);
+export const generateExamTokenComplete = createAction(types.generateExamTokenComplete);
+export const generateExamTokenError = createAction(types.generateExamTokenError)
+
 export const resetProgress = createAction(types.resetProgress);
 export const resetProgressError = createAction(types.resetProgressError);
 

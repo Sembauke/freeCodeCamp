@@ -324,6 +324,12 @@ export function postSubmitSurvey(body: {
   return post('/user/submit-survey', body);
 }
 
+export function getValidateExamToken(
+  body: User
+): Promise<ResponseWithData<void>> {
+  return post('/user/exam-environment/token', body);
+}
+
 /** PUT **/
 
 interface MyAbout {

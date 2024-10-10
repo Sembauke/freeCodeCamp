@@ -327,34 +327,34 @@ export const reducer = handleActions(
 
       return examResults && !examResults.passed
         ? {
-            ...state,
-            user: {
-              ...state.user,
-              [appUsername]: {
-                ...state.user[appUsername],
-                examResults
-              }
+          ...state,
+          user: {
+            ...state.user,
+            [appUsername]: {
+              ...state.user[appUsername],
+              examResults
             }
           }
+        }
         : {
-            ...state,
-            user: {
-              ...state.user,
-              [appUsername]: {
-                ...state.user[appUsername],
-                completedChallenges: uniqBy(
-                  [
-                    ...submittedchallenges,
-                    ...state.user[appUsername].completedChallenges
-                  ],
-                  'id'
-                ),
-                savedChallenges:
-                  savedChallenges ?? savedChallengesSelector(state[MainApp]),
-                examResults
-              }
+          ...state,
+          user: {
+            ...state.user,
+            [appUsername]: {
+              ...state.user[appUsername],
+              completedChallenges: uniqBy(
+                [
+                  ...submittedchallenges,
+                  ...state.user[appUsername].completedChallenges
+                ],
+                'id'
+              ),
+              savedChallenges:
+                savedChallenges ?? savedChallengesSelector(state[MainApp]),
+              examResults
             }
-          };
+          }
+        };
     },
     [actionTypes.setMsUsername]: (state, { payload }) => {
       const { appUsername } = state;
@@ -463,16 +463,17 @@ export const reducer = handleActions(
     [settingsTypes.submitNewUsernameComplete]: (state, { payload }) =>
       payload
         ? {
-            ...state,
-            user: {
-              ...state.user,
-              [state.appUsername]: {
-                ...state.user[state.appUsername],
-                username: payload
-              }
+          ...state,
+          user: {
+            ...state.user,
+            [state.appUsername]: {
+              ...state.user[state.appUsername],
+              username: payload
             }
           }
+        }
         : state,
+    [settingsTypes.generateExamTokenComplete]: (state, { payload }) => payload ? payload : state,
     [settingsTypes.submitNewAboutComplete]: (state, { payload }) =>
       payload ? spreadThePayloadOnUser(state, payload) : state,
     [settingsTypes.updateMyEmailComplete]: (state, { payload }) =>
@@ -496,15 +497,15 @@ export const reducer = handleActions(
     [settingsTypes.submitProfileUIComplete]: (state, { payload }) =>
       payload
         ? {
-            ...state,
-            user: {
-              ...state.user,
-              [state.appUsername]: {
-                ...state.user[state.appUsername],
-                profileUI: { ...payload }
-              }
+          ...state,
+          user: {
+            ...state.user,
+            [state.appUsername]: {
+              ...state.user[state.appUsername],
+              profileUI: { ...payload }
             }
           }
+        }
         : state
   },
   initialState

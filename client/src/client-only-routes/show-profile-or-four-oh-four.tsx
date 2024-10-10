@@ -9,6 +9,7 @@ import Profile from '../components/profile/profile';
 import { fetchProfileForUser } from '../redux/actions';
 
 import {
+  generateExamToken,
   submitNewAbout,
   updateMyPortfolio,
   updateMySocials
@@ -25,6 +26,7 @@ interface ShowProfileOrFourOhFourProps {
   fetchProfileForUser: (username: string) => void;
   updateMyPortfolio: () => void;
   submitNewAbout: () => void;
+  generateExamToken: (user: User) => void;
   updateMySocials: (formValues: Socials) => void;
   fetchState: {
     pending: boolean;
@@ -66,11 +68,13 @@ const mapDispatchToProps: {
   submitNewAbout: () => void;
   updateMyPortfolio: () => void;
   updateMySocials: (formValues: Socials) => void;
+  generateExamToken: (user: User) => void;
 } = {
   fetchProfileForUser,
   submitNewAbout,
   updateMyPortfolio,
-  updateMySocials
+  updateMySocials,
+  generateExamToken
 };
 
 function ShowProfileOrFourOhFour({
@@ -80,6 +84,7 @@ function ShowProfileOrFourOhFour({
   submitNewAbout,
   updateMyPortfolio,
   updateMySocials,
+  generateExamToken,
   isSessionUser,
   showLoading
 }: ShowProfileOrFourOhFourProps) {
@@ -110,6 +115,7 @@ function ShowProfileOrFourOhFour({
       submitNewAbout={submitNewAbout}
       updateMyPortfolio={updateMyPortfolio}
       updateMySocials={updateMySocials}
+      generateExamToken={generateExamToken}
     />
   );
 }

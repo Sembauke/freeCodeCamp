@@ -18,7 +18,8 @@ export const actionTypes = createTypes(
     ...createAsyncTypes('submitProfileUI'),
     ...createAsyncTypes('verifyCert'),
     ...createAsyncTypes('resetProgress'),
-    ...createAsyncTypes('deleteAccount')
+    ...createAsyncTypes('deleteAccount'),
+    ...createAsyncTypes('generateExamToken')
   ],
   ns
 );

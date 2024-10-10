@@ -17,6 +17,7 @@ import { createFlashMessage } from '../../components/Flash/redux';
 import { liveCerts } from '../../../config/cert-and-project-map';
 import {
   getUsernameExists,
+  getValidateExamToken,
   putUpdateMyAbout,
   putUpdateMyHonesty,
   putUpdateMyKeyboardShortcuts,
@@ -30,6 +31,8 @@ import {
 } from '../../utils/ajax';
 import { completedChallengesSelector } from '../selectors';
 import {
+  generateExamTokenComplete,
+  generateExamTokenError,
   submitNewAboutComplete,
   submitNewAboutError,
   submitNewUsernameComplete,
@@ -171,6 +174,19 @@ function* validateUsernameSaga({ payload }) {
   }
 }
 
+function* generateExamTokenSaga({ payload }) {
+  try {
+    const {
+      data: {
+        examEnvironmentAuthorizationToken
+      }
+    } = yield call(getValidateExamToken, payload);
+    yield put(generateExamTokenComplete(examEnvironmentAuthorizationToken))
+  } catch (e) {
+    return put(generateExamTokenError(e))
+  }
+}
+
 function* verifyCertificationSaga({ payload }) {
   // check redux if can claim cert before calling backend
   const currentCert = liveCerts.find(cert => cert.certSlug === payload);
@@ -232,6 +248,7 @@ export function createSettingsSagas(types) {
     takeLatest(types.submitNewAbout, submitNewAboutSaga),
     takeLatest(types.submitNewUsername, submitNewUsernameSaga),
     debounce(2000, types.validateUsername, validateUsernameSaga),
+    takeLatest(types.generateExamToken, generateExamTokenSaga),
     takeLatest(types.submitProfileUI, submitProfileUISaga),
     takeEvery(types.verifyCert, verifyCertificationSaga)
   ];
