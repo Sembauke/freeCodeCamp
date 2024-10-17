@@ -1,0 +1,36 @@
+.streak-container {
+  position: relative;
+}
+
+.streak-container-inner {
+  width: 220px;
+  height: auto;
+  padding: 10px;
+  background: var(--gray10);
+  position: absolute;
+  z-index: 1000;
+  left: -102px;
+  top: 40px;
+}
+
+.streak-container-inner strong {
+  margin: 0;
+  font-size: 14px;
+}
+
+.streak-container-inner td {
+  padding-right: 10px;
+  font-size: 14px;
+  color: black;
+}
+
+.triangle {
+  z-index: 1001;
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: -9px;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-bottom: 18px solid var(--gray10);
+}

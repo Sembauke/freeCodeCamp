@@ -11,6 +11,7 @@ import NavLogo from './nav-logo';
 import './universal-nav.css';
 import AuthOrProfile from './auth-or-profile';
 import LanguageList from './language-list';
+import ChallengeStreak from './challenge-streak';
 
 const SearchBar = Loadable(() => import('../../search/searchBar/search-bar'));
 const SearchBarOptimized = Loadable(
@@ -72,6 +73,7 @@ const UniversalNav = ({
         ) : (
           <>
             <LanguageList />
+
             <MenuButton
               displayMenu={displayMenu}
               hideMenu={hideMenu}
@@ -87,6 +89,7 @@ const UniversalNav = ({
               showMenu={showMenu}
               user={user}
             />
+            <ChallengeStreak />
             <AuthOrProfile user={user} />
           </>
         )}

@@ -6,12 +6,11 @@
   font-size: 18px;
   height: var(--header-height);
   justify-content: space-between;
-  padding: 0 5px;
 }
 
 @media (min-width: 401px) {
   .universal-nav {
-    padding: 0 15px;
+    padding: 0 60px 0 15px;
   }
 }
 
@@ -57,7 +56,7 @@
 .universal-nav-right {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 15px;
   flex: 1 0 33%;
 }
 
