@@ -2,7 +2,7 @@ const { createFilePath } = require('gatsby-source-filesystem');
 // TODO: ideally we'd remove lodash and just use lodash-es, but we can't require
 // es modules here.
 const uniq = require('lodash/uniq');
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+// const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 const webpack = require('webpack');
 
 const { SuperBlocks } = require('@freecodecamp/shared/config/curriculum');
@@ -61,11 +61,13 @@ exports.createPages = async function createPages({
   const result = await graphql(`
     {
       allChallengeNode(
-        sort: [
-          { field: challenge___superOrder }
-          { field: challenge___order }
-          { field: challenge___challengeOrder }
-        ]
+        sort: {
+          fields: [
+            challenge___superOrder
+            challenge___order
+            challenge___challengeOrder
+          ]
+        }
       ) {
         edges {
           node {
@@ -223,7 +225,7 @@ exports.createPages = async function createPages({
   });
 };
 
-exports.onCreateWebpackConfig = ({ stage, actions }) => {
+exports.onCreateWebpackConfig = ({ /* stage, */ actions }) => {
   const newPlugins = [
     // We add the shims of the node globals to the global scope
     new webpack.ProvidePlugin({
@@ -236,11 +238,12 @@ exports.onCreateWebpackConfig = ({ stage, actions }) => {
   // The monaco editor relies on some browser only globals so should not be
   // involved in SSR. Also, if the plugin is used during the 'build-html' stage
   // it overwrites the minfied files with ordinary ones.
-  if (stage !== 'build-html') {
-    newPlugins.push(
-      new MonacoWebpackPlugin({ filename: '[name].worker-[contenthash].js' })
-    );
-  }
+  // Temporarily disabled for testing
+  // if (stage !== 'build-html') {
+  //   newPlugins.push(
+  //     new MonacoWebpackPlugin({ filename: '[name].worker-[contenthash].js' })
+  //   );
+  // }
   actions.setWebpackConfig({
     resolve: {
       fallback: {
