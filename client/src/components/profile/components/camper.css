@@ -44,7 +44,7 @@
   height: clamp(112px, 15vw, 160px);
   border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .bio-main {
