@@ -49,24 +49,6 @@
   margin-left: 0.5rem;
 }
 
-.profile-certifications .cert-link-meta {
-  display: inline-flex;
-  align-items: center;
-  margin-left: 0.75rem;
-  flex-shrink: 0;
-}
-
-.profile-certifications .cert-link-badge {
-  border: 1px solid var(--quaternary-background);
-  background: var(--tertiary-background);
-  color: var(--quaternary-color);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.45rem;
-}
-
 .legacy-certifications-title {
   margin: 0;
   font-size: 1.1rem;

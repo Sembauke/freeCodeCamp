@@ -30,11 +30,8 @@ function CertButton({ username, cert }: CertButtonProps): JSX.Element {
         })}
       >
         <span className='cert-link-title'>{certTitle}</span>
-        <span className='cert-link-meta'>
-          <span className='cert-link-badge'>{t('profile.certified')}</span>
-          <span className='cert-link-arrow' aria-hidden='true'>
-            &gt;
-          </span>
+        <span className='cert-link-arrow' aria-hidden='true'>
+          &gt;
         </span>
       </Link>
     </li>

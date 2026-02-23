@@ -1,86 +1,33 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation, withTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import type { Dispatch } from 'redux';
 import { createSelector } from 'reselect';
 import { Button, Spacer } from '@freecodecamp/ui';
 
 import { userSelector } from '../../redux/selectors';
-import type { ProfileUI } from '../../redux/prop-types';
-import { submitProfileUI } from '../../redux/settings/actions';
 
 import FullWidthRow from '../helpers/full-width-row';
 import SectionHeader from './section-header';
-import ToggleRadioSetting from './toggle-radio-setting';
 
 const mapStateToProps = createSelector(userSelector, user => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   user
 }));
 
-const mapDispatchToProps = (dispatch: Dispatch) =>
-  bindActionCreators({ submitProfileUI }, dispatch);
-
 type PrivacyProps = {
-  submitProfileUI: (profileUI: ProfileUI) => void;
   user: {
-    profileUI: ProfileUI;
     username: string;
   };
 };
 
-function PrivacySettings({ submitProfileUI, user }: PrivacyProps): JSX.Element {
+function PrivacySettings({ user }: PrivacyProps): JSX.Element {
   const { t } = useTranslation();
-  const [privacyValues, setPrivacyValues] = useState({
-    ...user.profileUI
-  });
-
-  const [madeChanges, setMadeChanges] = useState(false);
-
-  function toggleFlag(flag: keyof ProfileUI): () => void {
-    return () => {
-      setMadeChanges(true);
-      setPrivacyValues({ ...privacyValues, [flag]: !privacyValues[flag] });
-    };
-  }
-
-  function submitNewProfileSettings(e: React.FormEvent) {
-    e.preventDefault();
-    if (!madeChanges) return;
-    submitProfileUI(privacyValues);
-    setMadeChanges(false);
-  }
 
   return (
     <div className='privacy-settings' id='privacy-settings'>
       <SectionHeader>{t('settings.headings.privacy')}</SectionHeader>
       <FullWidthRow>
         <p>{t('settings.privacy')}</p>
-        <form onSubmit={submitNewProfileSettings}>
-          <div role='group' aria-label={t('settings.headings.privacy')}>
-            <ToggleRadioSetting
-              action={t('settings.labels.my-profile')}
-              explain={t('settings.disabled')}
-              flag={privacyValues['isLocked']}
-              flagName='isLocked'
-              offLabel={t('buttons.public')}
-              onLabel={t('buttons.private')}
-              toggleFlag={toggleFlag('isLocked')}
-            />
-          </div>
-          <Button
-            type='submit'
-            size='large'
-            variant='primary'
-            block={true}
-            disabled={!madeChanges}
-            {...(!madeChanges && { tabIndex: -1 })}
-          >
-            {t('buttons.save')}{' '}
-            <span className='sr-only'>{t('settings.headings.privacy')}</span>
-          </Button>
-        </form>
       </FullWidthRow>
       <FullWidthRow>
         <Spacer size='m' />
@@ -105,5 +52,5 @@ PrivacySettings.displayName = 'PrivacySettings';
 
 export default connect(
   mapStateToProps,
-  mapDispatchToProps
+  null
 )(withTranslation()(PrivacySettings));

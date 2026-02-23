@@ -57,6 +57,16 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--quaternary-background);
+}
+
+.bio-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
 }
 
 .supporter svg {
@@ -87,20 +97,6 @@
   position: static;
 }
 
-.bio-edit-action {
-  min-height: 28px;
-  padding: 0.2rem 0.45rem;
-  font-size: 0.85rem;
-  border: 1px solid var(--quaternary-background);
-  color: var(--gray-45);
-}
-
-.bio-edit-action:hover,
-.bio-edit-action:focus-visible {
-  color: var(--quaternary-color);
-  border-color: var(--gray-45);
-}
-
 .profile-meta-container div {
   margin-inline-end: 12px;
 }
@@ -110,7 +106,7 @@
 }
 
 .bio-internet-section {
-  margin-top: 0.9rem;
+  margin-top: 0.4rem;
   padding-top: 0;
 }
 

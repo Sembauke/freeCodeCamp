@@ -1,8 +1,7 @@
 .profile-completeness {
   padding: clamp(1rem, 1.2vw, 1.5rem);
-  background: var(--secondary-background);
+  background: var(--primary-background);
   border: 1px solid var(--quaternary-background);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   margin-bottom: 1.5em;
 }
 
@@ -77,7 +76,7 @@
   gap: 10px;
   font-size: 1rem;
   padding: 0.35rem 0;
-  border-bottom: 1px solid var(--tertiary-background);
+  border-bottom: 1px solid var(--quaternary-background);
 }
 
 .profile-completeness-checklist li:last-child {

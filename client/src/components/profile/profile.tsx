@@ -156,6 +156,20 @@ function UserProfile({
         />
       )}
 
+      {isSessionUser && (
+        <FullWidthRow>
+          <section className='card'>
+            <WidgetHeader
+              title={t('settings.labels.my-profile')}
+              isSessionUser={isSessionUser}
+              isPrivate={profileUI.isLocked}
+              onToggle={() => toggleFlag('isLocked')}
+            />
+            <p className='profile-visibility-note'>{t('settings.disabled')}</p>
+          </section>
+        </FullWidthRow>
+      )}
+
       <Camper
         user={user}
         isSessionUser={isSessionUser}

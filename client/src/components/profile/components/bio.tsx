@@ -1,7 +1,12 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendar, faLocationDot } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCalendar,
+  faLocationDot,
+  faPen
+} from '@fortawesome/free-solid-svg-icons';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@freecodecamp/ui';
 import { AvatarRenderer, FullWidthRow } from '../../helpers';
 import { User } from '../../../redux/prop-types';
 import { parseDate } from './utils';
@@ -58,14 +63,20 @@ const Bio = ({ user, isSessionUser, onEditBio }: BioProps) => {
               <div className='profile-edit-container'>
                 <h1>@{username}</h1>
               </div>
-              {isSessionUser && onEditBio && (
-                <button
-                  className='profile-add-action profile-add-action--no-icon bio-edit-action'
-                  onClick={onEditBio}
-                  type='button'
-                >
-                  {t('profile.edit-personal-info')}
-                </button>
+              {isSessionUser && (
+                <div className='bio-header-actions'>
+                  {onEditBio && (
+                    <Button
+                      className='widget-edit-btn'
+                      aria-label={t('profile.edit-personal-info')}
+                      onClick={onEditBio}
+                      size='small'
+                      type='button'
+                    >
+                      <FontAwesomeIcon icon={faPen} />
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             {name && shouldShowName && <h2>{name}</h2>}
