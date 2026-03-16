@@ -255,6 +255,7 @@ function ShowClassic({
   const [exitPathname, setExitPathname] = useState('');
   const exitConfirmed = useRef(false);
   const isFilesInitializedRef = useRef(false);
+  const prevSavedChallengesRef = useRef(savedChallenges);
   const containerRef = useRef<HTMLElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const instructionsPanelRef = useRef<HTMLDivElement>(null);
@@ -273,7 +274,10 @@ function ShowClassic({
   const hasPreview = challengeHasPreview({ challengeType });
   const isCertProject =
     challengeType === challengeTypes.multifileCertProject ||
-    challengeType === challengeTypes.multifilePythonCertProject;
+    challengeType === challengeTypes.multifilePythonCertProject ||
+    challengeType === challengeTypes.lab ||
+    challengeType === challengeTypes.jsLab ||
+    challengeType === challengeTypes.pyLab;
   const getLayoutState = () => {
     const reflexLayout = store.get(REFLEX_LAYOUT) as ReflexLayout | null;
 
@@ -392,12 +396,17 @@ function ShowClassic({
       return;
     }
     if (isResetting) return;
+    if (prevSavedChallengesRef.current !== savedChallenges) {
+      prevSavedChallengesRef.current = savedChallenges;
+      return;
+    }
     setHasUnsavedChanges(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [challengeFiles]);
 
   useEffect(() => {
     if (!isCertProject) return;
+    prevSavedChallengesRef.current = savedChallenges;
     setHasUnsavedChanges(false);
     exitConfirmed.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
