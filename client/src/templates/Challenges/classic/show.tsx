@@ -1,5 +1,5 @@
-import { graphql } from 'gatsby';
-import React, { useState, useEffect, useRef } from 'react';
+import { graphql, navigate } from 'gatsby';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
@@ -60,9 +60,11 @@ import {
 import {
   challengeFilesSelector,
   consoleOutputSelector,
-  isChallengeCompletedSelector
+  isChallengeCompletedSelector,
+  isResettingSelector
 } from '../redux/selectors';
 import { savedChallengesSelector } from '../../../redux/selectors';
+import { usePageLeave } from '../hooks';
 import { getGuideUrl } from '../utils';
 import { preloadPage } from '../../../../utils/gatsby/page-loading';
 import envData from '../../../../config/env.json';
@@ -74,6 +76,7 @@ import MultifileEditor from './multifile-editor';
 import DesktopLayout from './desktop-layout';
 import MobileLayout from './mobile-layout';
 import { mergeChallengeFiles } from './saved-challenges';
+import ExitCertProjectModal from './exit-cert-project-modal';
 
 import './classic.css';
 import '../components/test-frame.css';
@@ -82,6 +85,7 @@ const mapStateToProps = (state: unknown) => ({
   challengeFiles: challengeFilesSelector(state) as ChallengeFiles,
   output: consoleOutputSelector(state) as string,
   isChallengeCompleted: isChallengeCompletedSelector(state),
+  isResetting: isResettingSelector(state) as boolean,
   savedChallenges: savedChallengesSelector(state) as SavedChallenge[]
 });
 
@@ -119,6 +123,7 @@ interface ShowClassicProps extends Pick<PreviewProps, 'previewMounted'> {
   initVisibleEditors: () => void;
   isChallengeCompleted: boolean;
   isDailyCodingChallenge?: boolean;
+  isResetting: boolean;
   output: string;
   pageContext: PageContext | DailyCodingChallengePageContext;
   updateChallengeMeta: (arg0: ChallengeMeta) => void;
@@ -237,6 +242,7 @@ function ShowClassic({
   setIsAdvancing,
   savedChallenges,
   isChallengeCompleted,
+  isResetting,
   output,
   executeChallenge,
   previewMounted
@@ -244,6 +250,11 @@ function ShowClassic({
   const { t } = useTranslation();
   const [resizing, setResizing] = useState(false);
   const [usingKeyboardInTablist, setUsingKeyboardInTablist] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [exitPathname, setExitPathname] = useState('');
+  const exitConfirmed = useRef(false);
+  const isFilesInitializedRef = useRef(false);
   const containerRef = useRef<HTMLElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor>();
   const instructionsPanelRef = useRef<HTMLDivElement>(null);
@@ -260,6 +271,9 @@ function ShowClassic({
   const windowTitle = `${blockNameTitle} | freeCodeCamp.org`;
   const openConsole = isJavaScriptChallenge({ challengeType });
   const hasPreview = challengeHasPreview({ challengeType });
+  const isCertProject =
+    challengeType === challengeTypes.multifileCertProject ||
+    challengeType === challengeTypes.multifilePythonCertProject;
   const getLayoutState = () => {
     const reflexLayout = store.get(REFLEX_LAYOUT) as ReflexLayout | null;
 
@@ -369,6 +383,55 @@ function ShowClassic({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dailyCodingChallengeLanguage]);
+
+  useEffect(() => {
+    if (!isCertProject) return;
+    if (!challengeFiles || challengeFiles.length === 0) return;
+    if (!isFilesInitializedRef.current) {
+      isFilesInitializedRef.current = true;
+      return;
+    }
+    if (isResetting) return;
+    setHasUnsavedChanges(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challengeFiles]);
+
+  useEffect(() => {
+    if (!isCertProject) return;
+    setHasUnsavedChanges(false);
+    exitConfirmed.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedChallenges]);
+
+  const onWindowClose = useCallback(
+    (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+    },
+    [hasUnsavedChanges]
+  );
+
+  const onHistoryChange = useCallback(
+    (targetPathname: string): boolean => {
+      if (!isCertProject || !hasUnsavedChanges || exitConfirmed.current) {
+        return false;
+      }
+      if (targetPathname) {
+        setExitPathname(targetPathname);
+      }
+      setIsExitModalOpen(true);
+      return true;
+    },
+    [isCertProject, hasUnsavedChanges]
+  );
+
+  usePageLeave({ onWindowClose, onHistoryChange });
+
+  const handleExitModalExit = useCallback(() => {
+    exitConfirmed.current = true;
+    setIsExitModalOpen(false);
+    void navigate(exitPathname || '/learn', { replace: true });
+  }, [exitPathname]);
 
   const initializeComponent = (title: string): void => {
     initConsole('');
@@ -567,6 +630,11 @@ function ShowClassic({
           }
         />
         <ShortcutsModal />
+        <ExitCertProjectModal
+          isOpen={isExitModalOpen}
+          onClose={() => setIsExitModalOpen(false)}
+          onExit={handleExitModalExit}
+        />
       </LearnLayout>
     </Hotkeys>
   );

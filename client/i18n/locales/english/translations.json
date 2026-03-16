@@ -663,6 +663,12 @@
       "heading": "Fill in the blank",
       "blank": "blank"
     },
+    "cert-project": {
+      "exit-modal-header": "Unsaved Changes",
+      "exit-modal-body": "You have unsaved changes. Are you sure you want to leave? Your code will not be saved.",
+      "exit-modal-yes": "Leave without saving",
+      "exit-modal-no": "Stay and save"
+    },
     "quiz": {
       "correct-answer": "Correct!",
       "incorrect-answer": "Incorrect.",
