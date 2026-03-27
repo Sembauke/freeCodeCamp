@@ -11,8 +11,6 @@ import {
 
 import {
   transformContents,
-  transformHeadTailAndContents,
-  compileHeadTail,
   createSource
 } from '@freecodecamp/shared/utils/polyvinyl';
 import { version } from '@freecodecamp/browser-scripts/package.json';
@@ -119,20 +117,14 @@ const getJSTranspiler = loopProtectOptions => async challengeFile => {
   await loadBabel();
   await loadPresetEnv();
   const babelOptions = getBabelOptions(presetsJS, loopProtectOptions);
-  return transformHeadTailAndContents(
-    babelTransformCode(babelOptions),
-    challengeFile
-  );
+  return transformContents(babelTransformCode(babelOptions), challengeFile);
 };
 
 const getJSXTranspiler = loopProtectOptions => async challengeFile => {
   await loadBabel();
   await loadPresetReact();
   const babelOptions = getBabelOptions(presetsJSX, loopProtectOptions);
-  return transformHeadTailAndContents(
-    babelTransformCode(babelOptions),
-    challengeFile
-  );
+  return transformContents(babelTransformCode(babelOptions), challengeFile);
 };
 
 const getJSXModuleTranspiler = loopProtectOptions => async challengeFile => {
@@ -151,8 +143,8 @@ const getTSTranspiler = loopProtectOptions => async challengeFile => {
   await loadBabel();
   const babelOptions = getBabelOptions(presetsJS, loopProtectOptions);
   return flow(
-    partial(transformHeadTailAndContents, compileTypeScriptCode),
-    partial(transformHeadTailAndContents, babelTransformCode(babelOptions))
+    partial(transformContents, compileTypeScriptCode),
+    partial(transformContents, babelTransformCode(babelOptions))
   )(challengeFile);
 };
 
@@ -166,8 +158,8 @@ const getTSXModuleTranspiler = loopProtectOptions => async challengeFile => {
     moduleId: 'index' // TODO: this should be dynamic
   };
   return flow(
-    partial(transformHeadTailAndContents, compileTypeScriptCode),
-    partial(transformHeadTailAndContents, babelTransformCode(babelOptions))
+    partial(transformContents, compileTypeScriptCode),
+    partial(transformContents, babelTransformCode(babelOptions))
   )(challengeFile);
 };
 
@@ -417,8 +409,7 @@ const getHtmlTranspiler = scriptOptions =>
 export const getTransformers = loopProtectOptions => [
   createSource,
   replaceNBSP,
-  createTranspiler(loopProtectOptions),
-  partial(compileHeadTail, '')
+  createTranspiler(loopProtectOptions)
 ];
 
 export const getMultifileJSXTransformers = loopProtectOptions => [
@@ -427,8 +418,4 @@ export const getMultifileJSXTransformers = loopProtectOptions => [
   createModuleTransformer(loopProtectOptions)
 ];
 
-export const getPythonTransformers = () => [
-  createSource,
-  replaceNBSP,
-  partial(compileHeadTail, '')
-];
+export const getPythonTransformers = () => [createSource, replaceNBSP];
