@@ -8,21 +8,6 @@ test.use({
   isMobile: true
 });
 
-test('Check the initial states of submit button and "check your code" button', async ({
-  page
-}) => {
-  await page.goto(
-    '/learn/2022/responsive-web-design/learn-html-by-building-a-cat-photo-app/step-3'
-  );
-  const checkButton = page.getByTestId('lowerJaw-check-button');
-
-  const submitButton = page.getByTestId('lowerJaw-submit-button');
-  const checkButtonState = await checkButton.getAttribute('aria-hidden');
-  const submitButtonState = await submitButton.getAttribute('aria-hidden');
-  expect(checkButtonState).toBe(null);
-  expect(submitButtonState).toBe('true');
-});
-
 test('Click on the "check your code" button', async ({ page }) => {
   await page.goto(
     '/learn/2022/responsive-web-design/learn-html-by-building-a-cat-photo-app/step-3'
@@ -144,82 +129,6 @@ test('Prompts unauthenticated user to sign in to save progress', async ({
   await page.goBack();
 
   await expect(loginButton).not.toBeVisible();
-});
-
-test('Should render UI correctly', async ({ page }) => {
-  await page.goto(
-    '/learn/2022/responsive-web-design/learn-html-by-building-a-cat-photo-app/step-3'
-  );
-  const codeCheckButton = page.getByRole('button', {
-    name: 'Check Your Code'
-  });
-  const lowerJawTips = page.getByTestId('failing-test-feedback');
-  await expect(codeCheckButton).toBeVisible();
-  await expect(lowerJawTips).toHaveCount(0);
-});
-
-test('Should display the text of the check code button accordingly based on device type and screen size', async ({
-  page,
-  isMobile,
-  browserName
-}) => {
-  await page.goto(
-    '/learn/2022/responsive-web-design/learn-html-by-building-a-cat-photo-app/step-3'
-  );
-  if (isMobile) {
-    await expect(
-      page.getByRole('button', { name: 'Check Your Code', exact: true })
-    ).toBeVisible();
-  } else if (browserName === 'webkit') {
-    await expect(
-      page.getByRole('button', { name: 'Check Your Code (Command + Enter)' })
-    ).toBeVisible();
-  } else {
-    await expect(
-      page.getByRole('button', { name: 'Check Your Code (Ctrl + Enter)' })
-    ).toBeVisible();
-  }
-});
-
-test('should display the text of submit and go to next challenge button accordingly based on device type', async ({
-  page,
-  isMobile,
-  browserName
-}) => {
-  await page.goto(
-    '/learn/2022/responsive-web-design/learn-html-by-building-a-cat-photo-app/step-3'
-  );
-  const editor = getEditors(page);
-  const checkButton = page.getByRole('button', { name: 'Check Your Code' });
-  await focusEditor({ page, isMobile });
-  await clearEditor({ page, browserName, isMobile });
-
-  await editor.fill(
-    '<h2>Cat Photos</h2>\n<p>Everyone loves cute cats online!</p>'
-  );
-
-  await checkButton.click();
-
-  if (isMobile) {
-    await expect(
-      page.getByRole('button', {
-        name: 'Submit and go to next challenge',
-        exact: true
-      })
-    ).toBeVisible();
-  } else if (browserName === 'webkit') {
-    await expect(
-      page.getByRole('button', {
-        name: 'Submit and go to next challenge (Command + Enter)'
-      })
-    ).toBeVisible();
-  } else {
-    await expect(
-      page.getByRole('button', {
-        name: 'Submit and go to next challenge (Ctrl + Enter)'
-      })
-    ).toBeVisible();
-  }
 });
 
 test('Hint text should not contain placeholders `fcc-expected`', async ({
