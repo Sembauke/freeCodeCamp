@@ -91,6 +91,7 @@ exports.createChallengePages = function (
   // allChallengeNodes is the same array reference across every call in a
   // given forEach, so this only needs to be built once and reused, rather
   // than re-filtering the entire node list for every single page.
+  let lastChallengeByBlockSource = null;
   let lastChallengeByBlock = null;
 
   return function (node, index, allChallengeNodes) {
@@ -112,7 +113,8 @@ exports.createChallengePages = function (
       saveSubmissionToDB
     } = node.challenge;
 
-    if (lastChallengeByBlock === null) {
+    if (lastChallengeByBlockSource !== allChallengeNodes) {
+      lastChallengeByBlockSource = allChallengeNodes;
       lastChallengeByBlock = getLastChallengeByBlock(allChallengeNodes);
     }
 
