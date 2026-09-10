@@ -1,0 +1,144 @@
+{
+  "route": "/",
+  "runsPerVariant": 3,
+  "lighthouseVersion": "13.4.1",
+  "fixedFeature": {
+    "landing-two-button-cta": false
+  },
+  "variants": {
+    "before": {
+      "runs": [
+        {
+          "run": 1,
+          "performance": 58,
+          "fcp": 1209.2118,
+          "lcp": 9575.20005,
+          "tbt": 643.5,
+          "cls": 0.04701351949441271
+        },
+        {
+          "run": 2,
+          "performance": 56,
+          "fcp": 2401.166,
+          "lcp": 12502.6235,
+          "tbt": 647.5,
+          "cls": 0
+        },
+        {
+          "run": 3,
+          "performance": 56,
+          "fcp": 2402.1651,
+          "lcp": 12490.871475,
+          "tbt": 653,
+          "cls": 0
+        }
+      ],
+      "medians": {
+        "performance": 56,
+        "fcp": 2401.166,
+        "lcp": 12490.871475,
+        "tbt": 647.5,
+        "cls": 0
+      },
+      "representativeReport": "reports/before-2.html"
+    },
+    "after": {
+      "runs": [
+        {
+          "run": 1,
+          "performance": 69,
+          "fcp": 1234.78935,
+          "lcp": 3833.36805,
+          "tbt": 826,
+          "cls": 0.011318155560833917
+        },
+        {
+          "run": 2,
+          "performance": 67,
+          "fcp": 1233.7247,
+          "lcp": 4127.1741,
+          "tbt": 841,
+          "cls": 0.011318155560833917
+        },
+        {
+          "run": 3,
+          "performance": 67,
+          "fcp": 1232.6505499999998,
+          "lcp": 4126.951649999999,
+          "tbt": 823.5,
+          "cls": 0.011318155560833917
+        }
+      ],
+      "medians": {
+        "performance": 67,
+        "fcp": 1233.7247,
+        "lcp": 4126.951649999999,
+        "tbt": 826,
+        "cls": 0.011318155560833917
+      },
+      "representativeReport": "reports/after-3.html"
+    }
+  },
+  "configSettings": {
+    "output": [
+      "json",
+      "html"
+    ],
+    "maxWaitForFcp": 30000,
+    "maxWaitForLoad": 45000,
+    "pauseAfterFcpMs": 1000,
+    "pauseAfterLoadMs": 1000,
+    "networkQuietThresholdMs": 1000,
+    "cpuQuietThresholdMs": 1000,
+    "formFactor": "mobile",
+    "throttling": {
+      "rttMs": 150,
+      "throughputKbps": 1638.4,
+      "requestLatencyMs": 562.5,
+      "downloadThroughputKbps": 1474.5600000000002,
+      "uploadThroughputKbps": 675,
+      "cpuSlowdownMultiplier": 4
+    },
+    "throttlingMethod": "simulate",
+    "screenEmulation": {
+      "mobile": true,
+      "width": 412,
+      "height": 823,
+      "deviceScaleFactor": 1.75,
+      "disabled": false
+    },
+    "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+    "auditMode": false,
+    "gatherMode": false,
+    "clearStorageTypes": [
+      "file_systems",
+      "shader_cache",
+      "service_workers",
+      "cache_storage"
+    ],
+    "disableStorageReset": false,
+    "debugNavigation": false,
+    "channel": "node",
+    "usePassiveGathering": false,
+    "disableFullPageScreenshot": false,
+    "skipAboutBlank": false,
+    "blankPage": "about:blank",
+    "ignoreStatusCode": false,
+    "locale": "en-US",
+    "blockedUrlPatterns": null,
+    "additionalTraceCategories": null,
+    "extraHeaders": null,
+    "precomputedLanternData": null,
+    "onlyAudits": null,
+    "onlyCategories": [
+      "performance"
+    ],
+    "skipAudits": null
+  },
+  "environment": {
+    "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Mobile Safari/537.36",
+    "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+    "benchmarkIndex": 3138.5,
+    "credits": {}
+  }
+}
