@@ -1,0 +1,94 @@
+name: Benchmark curriculum metadata
+'on':
+  push:
+    branches:
+    - perf/benchmark-curriculum-metadata
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Paired suite (upcoming=${{ matrix.upcoming }}, ${{ matrix.first }} then ${{ matrix.second }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - node-version: 24
+          upcoming: 'false'
+          first: baseline
+          second: reuse
+        - node-version: 24
+          upcoming: 'false'
+          first: reuse
+          second: baseline
+        - node-version: 24
+          upcoming: 'true'
+          first: baseline
+          second: reuse
+        - node-version: 24
+          upcoming: 'true'
+          first: reuse
+          second: baseline
+    steps:
+    - name: Checkout
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      with:
+        submodules: recursive
+        persist-credentials: false
+        fetch-depth: 3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Install pnpm
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+      id: pnpm-install
+      with:
+        run_install: false
+    - name: Set Environment variables
+      run: 'sed ''/^[[:space:]]*#/d; /^$/d'' sample.env >> $GITHUB_ENV
+
+        '
+    - name: Start MongoDB
+      run: docker compose -f docker/docker-compose.yml -f docker/docker-compose.ports.yml up -d
+    - name: Install Dependencies
+      run: 'echo pnpm version $(pnpm -v)
+
+        pnpm install
+
+        '
+    - name: Install Chrome for Puppeteer
+      run: pnpm -F=curriculum install-puppeteer
+    - name: Prepare ${{ matrix.first }}
+      if: ${{ !cancelled() }}
+      env:
+        VARIANT: ${{ matrix.first }}
+      run: "case \"$VARIANT\" in\n  baseline) reference=ef58b732c4ba8310d99b1b805c395b3e30b62c7b ;;\n  reuse) reference=46a34c98d2986aab1dbaee33be4d789e835ed4d8\
+        \ ;;\n  *) exit 1 ;;\nesac\ngit restore --source=\"$reference\" --worktree -- curriculum/src/build-curriculum.ts curriculum/src/build-curriculum.test.js\
+        \ curriculum/src/get-challenges.ts curriculum/src/test/test-challenges.js\nfind . -type d -name .vite -prune -exec\
+        \ rm -rf {} +\nnode --input-type=module <<'NODE'\nimport os from 'node:os';\nconsole.log(JSON.stringify({ variant:\
+        \ process.env.VARIANT, cpus: os.cpus().map(cpu => cpu.model), parallelism: os.availableParallelism(), memory: os.totalmem()\
+        \ }));\nNODE"
+    - name: Run full suite (${{ matrix.first }})
+      if: ${{ !cancelled() }}
+      env:
+        VARIANT: ${{ matrix.first }}
+        SHOW_UPCOMING_CHANGES: ${{ matrix.upcoming }}
+      run: /usr/bin/time -f "FCC_BENCH_VARIANT=$VARIANT FCC_BENCH_ELAPSED_SECONDS=%e" pnpm test --force --continue=always
+    - name: Prepare ${{ matrix.second }}
+      if: ${{ !cancelled() }}
+      env:
+        VARIANT: ${{ matrix.second }}
+      run: "case \"$VARIANT\" in\n  baseline) reference=ef58b732c4ba8310d99b1b805c395b3e30b62c7b ;;\n  reuse) reference=46a34c98d2986aab1dbaee33be4d789e835ed4d8\
+        \ ;;\n  *) exit 1 ;;\nesac\ngit restore --source=\"$reference\" --worktree -- curriculum/src/build-curriculum.ts curriculum/src/build-curriculum.test.js\
+        \ curriculum/src/get-challenges.ts curriculum/src/test/test-challenges.js\nfind . -type d -name .vite -prune -exec\
+        \ rm -rf {} +\nnode --input-type=module <<'NODE'\nimport os from 'node:os';\nconsole.log(JSON.stringify({ variant:\
+        \ process.env.VARIANT, cpus: os.cpus().map(cpu => cpu.model), parallelism: os.availableParallelism(), memory: os.totalmem()\
+        \ }));\nNODE"
+    - name: Run full suite (${{ matrix.second }})
+      if: ${{ !cancelled() }}
+      env:
+        VARIANT: ${{ matrix.second }}
+        SHOW_UPCOMING_CHANGES: ${{ matrix.upcoming }}
+      run: /usr/bin/time -f "FCC_BENCH_VARIANT=$VARIANT FCC_BENCH_ELAPSED_SECONDS=%e" pnpm test --force --continue=always
+    timeout-minutes: 55
