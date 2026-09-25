@@ -7,19 +7,28 @@ permissions:
   contents: read
 jobs:
   test:
-    name: Full suite (${{ matrix.workers }} workers, upcoming=${{ matrix.upcoming }})
+    name: Paired suite (upcoming=${{ matrix.upcoming }}, ${{ matrix.first }} then ${{ matrix.second }} workers)
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        node-version:
-          - 24
-        workers:
-          - 3
-          - 4
-        upcoming:
-          - 'false'
-          - 'true'
+        include:
+          - node-version: 24
+            upcoming: 'false'
+            first: 3
+            second: 4
+          - node-version: 24
+            upcoming: 'false'
+            first: 4
+            second: 3
+          - node-version: 24
+            upcoming: 'true'
+            first: 3
+            second: 4
+          - node-version: 24
+            upcoming: 'true'
+            first: 4
+            second: 3
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -47,10 +56,13 @@ jobs:
           pnpm install
       - name: Install Chrome for Puppeteer
         run: pnpm -F=curriculum install-puppeteer
-      - name: Set curriculum worker limit and report hardware
+      - name: Prepare ${{ matrix.first }} curriculum workers
+        if: ${{ !cancelled() }}
         env:
-          WORKERS: ${{ matrix.workers }}
+          WORKERS: ${{ matrix.first }}
         run: |-
+          git show HEAD:curriculum/vitest.config.mjs > curriculum/vitest.config.mjs
+          find . -type d -name .vite -prune -exec rm -rf {} +
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           import os from 'node:os';
@@ -61,8 +73,33 @@ jobs:
           console.log(JSON.stringify({ workers: Number(process.env.WORKERS), cpus: os.cpus().map(cpu => cpu.model), parallelism: os.availableParallelism(), memory: os.totalmem() }));
           NODE
           cat curriculum/vitest.config.mjs
-      - name: Run Tests
-        run: /usr/bin/time -f 'FCC_BENCH_ELAPSED_SECONDS=%e' pnpm test --force --continue=always
+      - name: Run full suite with ${{ matrix.first }} workers
+        if: ${{ !cancelled() }}
         env:
+          WORKERS: ${{ matrix.first }}
           SHOW_UPCOMING_CHANGES: ${{ matrix.upcoming }}
-    timeout-minutes: 35
+        run: /usr/bin/time -f "FCC_BENCH_WORKERS=$WORKERS FCC_BENCH_ELAPSED_SECONDS=%e" pnpm test --force --continue=always
+      - name: Prepare ${{ matrix.second }} curriculum workers
+        if: ${{ !cancelled() }}
+        env:
+          WORKERS: ${{ matrix.second }}
+        run: |-
+          git show HEAD:curriculum/vitest.config.mjs > curriculum/vitest.config.mjs
+          find . -type d -name .vite -prune -exec rm -rf {} +
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import os from 'node:os';
+          const path = 'curriculum/vitest.config.mjs';
+          const source = fs.readFileSync(path, 'utf8');
+          if (!source.includes('  test: {') || source.includes('maxWorkers')) throw new Error('Unexpected Vitest configuration');
+          fs.writeFileSync(path, source.replace('  test: {', '  test: {' + String.fromCharCode(10) + '    maxWorkers: ' + process.env.WORKERS + ','));
+          console.log(JSON.stringify({ workers: Number(process.env.WORKERS), cpus: os.cpus().map(cpu => cpu.model), parallelism: os.availableParallelism(), memory: os.totalmem() }));
+          NODE
+          cat curriculum/vitest.config.mjs
+      - name: Run full suite with ${{ matrix.second }} workers
+        if: ${{ !cancelled() }}
+        env:
+          WORKERS: ${{ matrix.second }}
+          SHOW_UPCOMING_CHANGES: ${{ matrix.upcoming }}
+        run: /usr/bin/time -f "FCC_BENCH_WORKERS=$WORKERS FCC_BENCH_ELAPSED_SECONDS=%e" pnpm test --force --continue=always
+    timeout-minutes: 55
