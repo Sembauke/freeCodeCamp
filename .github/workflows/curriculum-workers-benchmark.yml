@@ -1,0 +1,68 @@
+name: Benchmark curriculum workers
+'on':
+  push:
+    branches:
+      - perf/benchmark-curriculum-workers
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Full suite (${{ matrix.workers }} workers, upcoming=${{ matrix.upcoming }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 24
+        workers:
+          - 3
+          - 4
+        upcoming:
+          - 'false'
+          - 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        id: pnpm-install
+        with:
+          run_install: false
+      - name: Set Environment variables
+        run: |
+          sed '/^[[:space:]]*#/d; /^$/d' sample.env >> $GITHUB_ENV
+          cat sample.env
+      - name: Start MongoDB
+        run: docker compose -f docker/docker-compose.yml -f docker/docker-compose.ports.yml up -d
+      - name: Install Dependencies
+        run: |
+          echo pnpm version $(pnpm -v)
+          pnpm install
+      - name: Install Chrome for Puppeteer
+        run: pnpm -F=curriculum install-puppeteer
+      - name: Set curriculum worker limit and report hardware
+        env:
+          WORKERS: ${{ matrix.workers }}
+        run: |-
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import os from 'node:os';
+          const path = 'curriculum/vitest.config.mjs';
+          const source = fs.readFileSync(path, 'utf8');
+          if (!source.includes('  test: {') || source.includes('maxWorkers')) throw new Error('Unexpected Vitest configuration');
+          fs.writeFileSync(path, source.replace('  test: {', '  test: {' + String.fromCharCode(10) + '    maxWorkers: ' + process.env.WORKERS + ','));
+          console.log(JSON.stringify({ workers: Number(process.env.WORKERS), cpus: os.cpus().map(cpu => cpu.model), parallelism: os.availableParallelism(), memory: os.totalmem() }));
+          NODE
+          cat curriculum/vitest.config.mjs
+      - name: Run Tests
+        run: /usr/bin/time -f 'FCC_BENCH_ELAPSED_SECONDS=%e' pnpm test --force --continue=always
+        env:
+          SHOW_UPCOMING_CHANGES: ${{ matrix.upcoming }}
+    timeout-minutes: 35
