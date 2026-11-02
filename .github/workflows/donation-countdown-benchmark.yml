@@ -25,13 +25,13 @@ jobs:
       VARIANT: ${{ matrix.variant }}
       SAMPLE: ${{ matrix.sample }}
       BASELINE_SOURCE: f3750a9a705e74218c8369984f7390eaa03440ce
-      OPTIMIZED_SOURCE: 3e0a1bb9800fbd0544d4ace09828b868ccb05cb5
+      OPTIMIZED_SOURCE: 9775483afd73a3b04162eacba2e1e344b71d95b3
       ARTIFACT_RUN_ID: '41432816520'
     steps:
       - name: Checkout identical source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: 3e0a1bb9800fbd0544d4ace09828b868ccb05cb5
+          ref: 9775483afd73a3b04162eacba2e1e344b71d95b3
           fetch-depth: 1
           persist-credentials: false
 
