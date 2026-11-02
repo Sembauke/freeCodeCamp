@@ -1,0 +1,224 @@
+name: Benchmark donation countdown tests
+
+on:
+  push:
+    branches: [bench/donation-countdown-clock]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  benchmark:
+    name: ${{ matrix.variant }} / sample ${{ matrix.sample }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        sample: [1, 2, 3]
+        variant: [baseline, optimized]
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      GITHUB_TOKEN: ${{ github.token }}
+      VARIANT: ${{ matrix.variant }}
+      SAMPLE: ${{ matrix.sample }}
+      BASELINE_SOURCE: f3750a9a705e74218c8369984f7390eaa03440ce
+      OPTIMIZED_SOURCE: 3e0a1bb9800fbd0544d4ace09828b868ccb05cb5
+      ARTIFACT_RUN_ID: '41432816520'
+    steps:
+      - name: Checkout identical source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 3e0a1bb9800fbd0544d4ace09828b868ccb05cb5
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Restore baseline test only
+        if: matrix.variant == 'baseline'
+        run: |
+          git fetch --depth=1 --no-tags https://github.com/freeCodeCamp/freeCodeCamp.git "$BASELINE_SOURCE"
+          git show "$BASELINE_SOURCE:e2e/donation-modal.spec.ts" > e2e/donation-modal.spec.ts
+
+      - name: Record benchmark inputs
+        run: |
+          python3 - <<'PY'
+          import json, os, platform
+          from pathlib import Path
+
+          output = Path('timing-results')
+          output.mkdir(exist_ok=True)
+          metadata = {
+              'variant': os.environ['VARIANT'],
+              'sample': int(os.environ['SAMPLE']),
+              'source_revision': os.environ['OPTIMIZED_SOURCE'],
+              'test_revision': os.environ['BASELINE_SOURCE'] if os.environ['VARIANT'] == 'baseline' else os.environ['OPTIMIZED_SOURCE'],
+              'artifact_repository': 'freeCodeCamp/freeCodeCamp',
+              'artifact_run_id': os.environ['ARTIFACT_RUN_ID'],
+              'client_config_revision': 'b1ed468633f878a87ad3f0f27951e6ad1c926277',
+              'benchmark_revision': os.environ['GITHUB_SHA'],
+              'runner_image': os.environ.get('ImageOS'),
+              'runner_image_version': os.environ.get('ImageVersion'),
+              'architecture': platform.machine(),
+              'cpu_count': os.cpu_count(),
+              'workers': 1,
+              'retries': 0,
+          }
+          (output / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+
+      - name: Download shared client artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: client-artifact
+          path: client/public
+          github-token: ${{ github.token }}
+          repository: freeCodeCamp/freeCodeCamp
+          run-id: 41432816520
+
+      - name: Checkout identical client configuration
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: freeCodeCamp/client-config
+          ref: b1ed468633f878a87ad3f0f27951e6ad1c926277
+          path: client-config
+          persist-credentials: false
+
+      - name: Configure client server
+        run: cp client-config/serve.json client/public/serve.json
+
+      - name: Download shared API artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: api-artifact
+          path: api-artifact
+          github-token: ${{ github.token }}
+          repository: freeCodeCamp/freeCodeCamp
+          run-id: 41432816520
+
+      - name: Load identical API image
+        run: |
+          docker load < api-artifact/api-artifact.tar
+          rm api-artifact/api-artifact.tar
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set freeCodeCamp environment variables
+        run: |
+          sed '/^[[:space:]]*#/d; /^$/d' sample.env >> "$GITHUB_ENV"
+          cp sample.env .env
+
+      - name: Install identical Chromium headless shell
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Start apps
+        run: |
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.ports.yml -f docker/docker-compose.e2e.yml up -d
+          pnpm run serve:client-ci > timing-results/client-server.log 2>&1 &
+          sleep 10
+
+      - name: Seed exam data
+        run: pnpm run seed:exams
+
+      - name: Prepare E2E dependencies outside the measurement
+        run: pnpm -F e2e exec turbo setup
+
+      - name: Measure all donation modal tests
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ github.workspace }}/timing-results/playwright.json
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, sys, time
+          from pathlib import Path
+
+          output = Path('timing-results')
+          result = json.loads((output / 'metadata.json').read_text())
+          command = [
+              'pnpm', 'exec', 'playwright', 'test',
+              '--config=e2e/playwright.config.ts', 'donation-modal.spec.ts',
+              '--project=chromium', '--workers=1', '--retries=0',
+              '--reporter=line,json',
+          ]
+          result['command'] = command
+          result['node_version'] = subprocess.check_output(['node', '--version'], text=True).strip()
+          result['playwright_version'] = subprocess.check_output(['pnpm', 'exec', 'playwright', '--version'], text=True).strip()
+          start = time.perf_counter()
+          with (output / 'playwright.log').open('w') as log:
+              process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+              for line in process.stdout:
+                  log.write(line)
+                  print(line, end='', flush=True)
+              return_code = process.wait()
+          result['command_seconds'] = time.perf_counter() - start
+          result['return_code'] = return_code
+          (output / 'timing.json').write_text(json.dumps(result, indent=2) + '\n')
+          errors = []
+          report_path = output / 'playwright.json'
+          if report_path.exists():
+              report = json.loads(report_path.read_text())
+              result['playwright_stats'] = report.get('stats', {})
+              tests = []
+
+              def collect(suites, titles=()):
+                  for suite in suites:
+                      path = (*titles, suite['title'])
+                      for spec in suite.get('specs', []):
+                          for test in spec['tests']:
+                              tests.append({
+                                  'title': ' > '.join((*path, spec['title'])),
+                                  'project': test['projectName'],
+                                  'status': test['status'],
+                                  'results': [{key: attempt.get(key) for key in ['status', 'duration', 'retry']} for attempt in test['results']],
+                              })
+                      collect(suite.get('suites', []), path)
+
+              collect(report.get('suites', []))
+              result['tests'] = tests
+              result['test_count'] = len(tests)
+              result['test_duration_seconds'] = sum(attempt['duration'] for test in tests for attempt in test['results']) / 1000
+              if len(tests) != 10:
+                  errors.append(f'Expected 10 tests, found {len(tests)}')
+              if report.get('errors'):
+                  errors.append('Playwright reported global errors')
+              for test in tests:
+                  if test['project'] != 'chromium' or test['status'] != 'expected' or len(test['results']) != 1 or test['results'][0]['status'] != 'passed' or test['results'][0]['retry'] != 0:
+                      errors.append(f"Test did not pass once without retry: {test['title']}")
+          else:
+              errors.append('Playwright JSON report was not written')
+          result['validation_errors'] = errors
+          (output / 'timing.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2), flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f"{result['variant']} / sample {result['sample']}: {result['command_seconds']:.3f} seconds; exit code {return_code}; validation errors: {len(errors)}\n")
+          sys.exit(return_code or bool(errors))
+          PY
+
+      - name: Collect app diagnostics
+        if: always()
+        run: |
+          mkdir -p timing-results
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.ports.yml -f docker/docker-compose.e2e.yml logs --no-color > timing-results/containers.log 2>&1 || true
+          docker compose -f docker/docker-compose.yml -f docker/docker-compose.ports.yml -f docker/docker-compose.e2e.yml ps --all > timing-results/containers-status.log 2>&1 || true
+          if test -d e2e/playwright/test-results; then
+            cp -a e2e/playwright/test-results timing-results/test-results
+          fi
+
+      - name: Upload timing and failure artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: donation-countdown-${{ matrix.variant }}-${{ matrix.sample }}
+          path: timing-results
+          retention-days: 7
