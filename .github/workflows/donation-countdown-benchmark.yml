@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     strategy:
-      fail-fast: false
+      fail-fast: true
       max-parallel: 2
       matrix:
         sample: [1, 2, 3]
@@ -25,13 +25,13 @@ jobs:
       VARIANT: ${{ matrix.variant }}
       SAMPLE: ${{ matrix.sample }}
       BASELINE_SOURCE: f3750a9a705e74218c8369984f7390eaa03440ce
-      OPTIMIZED_SOURCE: 9775483afd73a3b04162eacba2e1e344b71d95b3
+      OPTIMIZED_SOURCE: eea6a0daefada135ba2a13f2859a3351f3e47451
       ARTIFACT_RUN_ID: '41432816520'
     steps:
       - name: Checkout identical source revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: 9775483afd73a3b04162eacba2e1e344b71d95b3
+          ref: eea6a0daefada135ba2a13f2859a3351f3e47451
           fetch-depth: 1
           persist-credentials: false
 
