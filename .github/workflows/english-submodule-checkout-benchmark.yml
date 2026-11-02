@@ -1,0 +1,178 @@
+name: Benchmark English CI checkout
+
+on:
+  push:
+    branches: [bench/english-submodule-checkout]
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: ${{ matrix.variant }} / sample ${{ matrix.sample }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        sample: [1, 2, 3]
+        variant: [recursive, no-submodules]
+    env:
+      SOURCE_REVISION: d948eb93ebb484dceeb5437562c499372fb64d08
+      VARIANT: ${{ matrix.variant }}
+      SAMPLE: ${{ matrix.sample }}
+      BENCHMARK_JOB_NAME: ${{ matrix.variant }} / sample ${{ matrix.sample }}
+    steps:
+      - name: Start checkout timer
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os, time
+          from pathlib import Path
+
+          start = {
+              'monotonic_ns': time.monotonic_ns(),
+              'utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+          }
+          destination = Path(os.environ['RUNNER_TEMP']) / 'english-submodule-checkout-start.json'
+          destination.write_text(json.dumps(start))
+          PY
+
+      - name: Checkout pinned source
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: freeCodeCamp/freeCodeCamp
+          ref: d948eb93ebb484dceeb5437562c499372fb64d08
+          fetch-depth: 1
+          submodules: ${{ matrix.variant == 'recursive' && 'recursive' || 'false' }}
+          persist-credentials: false
+
+      - name: Record timing and verify checkout
+        if: always()
+        env:
+          CHECKOUT_OUTCOME: ${{ steps.checkout.outcome }}
+        run: |
+          python3 - <<'PY'
+          import time
+          end_ns = time.monotonic_ns()
+
+          import datetime, hashlib, json, os, platform, subprocess, sys
+          from pathlib import Path
+
+          output = Path(os.environ['RUNNER_TEMP']) / 'english-submodule-checkout'
+          output.mkdir(exist_ok=True)
+          result = {
+              'variant': os.environ['VARIANT'],
+              'sample': int(os.environ['SAMPLE']),
+              'source_repository': 'freeCodeCamp/freeCodeCamp',
+              'source_revision': os.environ['SOURCE_REVISION'],
+              'checkout_action': 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+              'checkout_action_step_name': 'Checkout pinned source',
+              'checkout_outcome': os.environ['CHECKOUT_OUTCOME'],
+              'fetch_depth': 1,
+              'persist_credentials': False,
+              'benchmark_revision': os.environ['GITHUB_SHA'],
+              'benchmark_run_id': os.environ['GITHUB_RUN_ID'],
+              'benchmark_run_attempt': os.environ['GITHUB_RUN_ATTEMPT'],
+              'benchmark_job_name': os.environ['BENCHMARK_JOB_NAME'],
+              'runner_image': os.environ.get('ImageOS'),
+              'runner_image_version': os.environ.get('ImageVersion'),
+              'architecture': platform.machine(),
+              'cpu_count': os.cpu_count(),
+              'checkout_end_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              'timing_scope': 'Before/after action steps; excludes verification, includes step transition overhead. Use GitHub job step timestamps for action-only duration.',
+          }
+          errors = []
+          try:
+              start_path = Path(os.environ['RUNNER_TEMP']) / 'english-submodule-checkout-start.json'
+              start = json.loads(start_path.read_text())
+              result['checkout_start_utc'] = start['utc']
+              result['checkout_window_seconds'] = (end_ns - start['monotonic_ns']) / 1e9
+          except Exception as error:
+              errors.append(f'Could not read start time: {error}')
+
+          def git(*arguments, cwd=None):
+              return subprocess.check_output(['git', *arguments], cwd=cwd)
+
+          if result['checkout_outcome'] != 'success':
+              errors.append(f"Checkout action did not succeed: {result['checkout_outcome']}")
+          else:
+              try:
+                  actual_revision = git('rev-parse', 'HEAD').decode().strip()
+                  result['actual_source_revision'] = actual_revision
+                  if actual_revision != result['source_revision']:
+                      errors.append(f'Unexpected source revision: {actual_revision}')
+                  entries = git('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\0')
+                  tracked_paths = []
+                  gitlinks = {}
+                  for entry in entries:
+                      if not entry:
+                          continue
+                      header, raw_path = entry.split(b'\t', 1)
+                      mode, kind, revision = header.decode().split()
+                      path = os.fsdecode(raw_path)
+                      if mode == '160000':
+                          gitlinks[path] = revision
+                      elif kind == 'blob':
+                          tracked_paths.append(path)
+                  missing = [path for path in tracked_paths if not os.path.lexists(path)]
+                  result['root_tracked_file_count'] = len(tracked_paths)
+                  result['root_tracked_paths_sha256'] = hashlib.sha256('\0'.join(sorted(tracked_paths)).encode()).hexdigest()
+                  result['missing_root_tracked_files'] = missing
+                  if missing:
+                      errors.append(f'{len(missing)} tracked root files are missing')
+                  if subprocess.run(['git', 'diff', '--quiet', '--ignore-submodules=all', 'HEAD']).returncode:
+                      errors.append('Tracked root files differ from the pinned source')
+
+                  expected_gitlinks = {
+                      'curriculum/i18n-curriculum': '3b0b62c24f4a5de98065382b8f2fd90363bb5091',
+                      'tools/challenge-editor': '48b3607cfc037df9767508ec3e8ddbbf32412276',
+                  }
+                  if gitlinks != expected_gitlinks:
+                      errors.append(f'Unexpected source gitlinks: {gitlinks}')
+                  submodules = []
+                  for path, expected_revision in expected_gitlinks.items():
+                      directory = Path(path)
+                      checked_out = (directory / '.git').exists()
+                      submodule = {
+                          'path': path,
+                          'expected_revision': expected_revision,
+                          'checked_out': checked_out,
+                          'top_level_entry_count': len(list(directory.iterdir())) if directory.exists() else 0,
+                          'tracked_file_count': 0,
+                      }
+                      if result['variant'] == 'recursive':
+                          if not checked_out:
+                              errors.append(f'Submodule not checked out: {path}')
+                          else:
+                              submodule['actual_revision'] = git('rev-parse', 'HEAD', cwd=path).decode().strip()
+                              submodule['tracked_file_count'] = len([item for item in git('ls-files', '-z', cwd=path).split(b'\0') if item])
+                              if submodule['actual_revision'] != expected_revision:
+                                  errors.append(f'Submodule has unexpected revision: {path}')
+                      elif checked_out or submodule['top_level_entry_count']:
+                          errors.append(f'Submodule directory is not empty: {path}')
+                      submodules.append(submodule)
+                  result['submodules'] = submodules
+                  result['total_tracked_file_count'] = len(tracked_paths) + sum(item['tracked_file_count'] for item in submodules)
+              except Exception as error:
+                  errors.append(f'Checkout verification failed: {error}')
+
+          result['validation_errors'] = errors
+          (output / 'timing.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2), flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              elapsed = result.get('checkout_window_seconds')
+              duration = f'{elapsed:.3f}s' if elapsed is not None else 'unavailable'
+              summary.write(f"{result['benchmark_job_name']}: checkout window {duration}; validation errors: {len(errors)}\n")
+          sys.exit(bool(errors))
+          PY
+
+      - name: Upload checkout measurement
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: english-checkout-${{ matrix.variant }}-${{ matrix.sample }}
+          path: ${{ runner.temp }}/english-submodule-checkout/timing.json
+          if-no-files-found: error
+          retention-days: 7
