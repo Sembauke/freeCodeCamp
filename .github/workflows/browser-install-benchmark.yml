@@ -1,0 +1,95 @@
+name: Benchmark browser installation
+
+on:
+  push:
+    branches: [bench/ci-browser-install]
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: ${{ matrix.variant }} / sample ${{ matrix.sample }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        sample: [1, 2, 3]
+        variant: [baseline, optimized]
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: ${{ matrix.variant == 'optimized' && 'true' || 'false' }}
+      VARIANT: ${{ matrix.variant }}
+      SAMPLE: ${{ matrix.sample }}
+    steps:
+      - name: Checkout identical source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Use Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          run_install: false
+      - name: Measure dependency installation
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, time
+          start = time.perf_counter()
+          subprocess.run(['pnpm', 'install'], check=True)
+          seconds = time.perf_counter() - start
+          result = {'variant': os.environ['VARIANT'], 'sample': int(os.environ['SAMPLE']), 'dependency_seconds': seconds}
+          with open('browser-install-timing.json', 'w') as output:
+              json.dump(result, output)
+          print(f'Dependency installation: {seconds:.3f} seconds')
+          PY
+      - name: Set environment variables as in E2E
+        run: |
+          sed '/^[[:space:]]*#/d; /^$/d' sample.env >> "$GITHUB_ENV"
+          cp sample.env .env
+      - name: Measure Playwright installation
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, time
+          command = ['npx', 'playwright', 'install', '--with-deps']
+          if os.environ['VARIANT'] == 'optimized':
+              command = ['pnpm', 'exec', 'playwright', 'install', '--with-deps', '--only-shell', 'chromium']
+          start = time.perf_counter()
+          subprocess.run(command, check=True)
+          seconds = time.perf_counter() - start
+          with open('browser-install-timing.json') as source:
+              result = json.load(source)
+          result['playwright_seconds'] = seconds
+          result['total_seconds'] = result['dependency_seconds'] + seconds
+          with open('browser-install-timing.json', 'w') as output:
+              json.dump(result, output, indent=2)
+          print(json.dumps(result, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('```json\n' + json.dumps(result, indent=2) + '\n```\n')
+          PY
+      - name: Verify Chromium launches
+        run: |
+          node <<'JS'
+          const { chromium } = require('@playwright/test');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            await page.setContent('<h1>Browser installation smoke test</h1>');
+            if (await page.locator('h1').textContent() !== 'Browser installation smoke test') throw new Error('Smoke test failed');
+            console.log('Chromium headless smoke test passed');
+            await browser.close();
+          })().catch(error => { console.error(error); process.exit(1); });
+          JS
+      - name: Record installed browser directories
+        run: |
+          du -sh "$HOME/.cache/ms-playwright"/* || true
+          if test -d "$HOME/.cache/puppeteer"; then du -sh "$HOME/.cache/puppeteer"/*; fi
+      - name: Upload timing
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: browser-install-${{ matrix.variant }}-${{ matrix.sample }}
+          path: browser-install-timing.json
